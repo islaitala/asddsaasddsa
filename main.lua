@@ -1,144 +1,115 @@
--- require point library and physics library
+-- requirataan kirjastoja
 local point = require("point")
 local physics = require("physics")
 
--- start physics and set gravity to zero
+-- aloita fysiikat
 physics.start()
 physics.setGravity(0, 0)
 
--- init some needed variables
-local _X = display.contentCenterX
-local _Y = display.contentCenterY
-local _W = display.actualContentWidth
-local _H = display.contentHeight
+-- init joitain muuttujia
+local X = display.contentCenterX
+local Y = display.contentCenterY
+local W = display.actualContentWidth
+local H = display.contentHeight
 local online = true
 local gameReset
-local scoreAI, score = 0, 0
+local scoreAI = 0
+local score = 0
 
--- this function creates some (if not all of them) visible/displayable things
-local function createObstacles()
-	local wall1 = display.newRect(_X  + _W / 2, _Y, 10, _H)
-	wall1:setFillColor(1,1,1)
-	wall1.name = "wall1"
-	physics.addBody(wall1, "static", {bounce = 1})
+-- tämä funktio luo joitain näkyviä asioita
+local function luoJuttuja()
+	local seina1 = display.newRect(X + W / 2, Y, 10, H)
+	seina1.nimi = "seina1"
+	physics.addBody(seina1, "static", {bounce = 1})
 
-	local wall2 = display.newRect(_X  - _W / 2, _Y, 10, _H)
-	wall2:setFillColor(1,1,1)
-	physics.addBody(wall2, "static", {bounce = 1})
-   	wall2.name = "wall2"
+	local seina2 = display.newRect(X - W / 2, Y, 10, H)
+	seina2.nimi = "seina2"
+	physics.addBody(seina2, "static", {bounce = 1})
 
-	roof1 = display.newRect(_X, _Y - _H / 2, _W, 10)
-	roof1:setFillColor(1,1,1)
-	physics.addBody(roof1, "static", {bounce = 1})
-	roof1.name = "roof1"
+	katto1 = display.newRect(X, Y - H / 2, W, 10)
+	katto1.nimi = "katto1"
+	physics.addBody(katto1, "static", {bounce = 1})
 
-	roof2 = display.newRect(_X, _Y + _H / 2, _W, 10)
-	roof2:setFillColor(1,1,1)
-	physics.addBody(roof2, "static", {bounce = 1})
-	roof2.name = "roof2"
+	katto2 = display.newRect(X, Y + H / 2, W, 10)
+	katto2.nimi = "katto2"
+	physics.addBody(katto2, "static", {bounce = 1})
 
-	es = display.setDefault("background", 0, 0, 0)
+	tausta = display.setDefault("background", 0, 0, 0)
 
-	scoreText = display.newText(""..scoreAI.."      "..score.."", _X, _Y - _H/2.3, es, 25)
-	scoreText:setFillColor(1,1,1)
-	scoreText:toBack()
+	scoreTeksti = display.newText(""..scoreAI.." "..score.."", X, Y - H / 2.3, native.systemFont, 25)
+	scoreTeksti:toBack()
 
-	clap1 = display.newRoundedRect(_X  + _W / 2.1, _Y, 10, _H / 4, 4.5)
-	clap1:setFillColor(1,1,1)
-	physics.addBody(clap1, "static", {bounce = 1})
-	clap1.name = "clap1"
+	maila1 = display.newRect(X + W / 2.1, Y, 10, H /4, 4.5)
+	maila1.nimi = "maila1"
+	physics.addBody(maila1, "static", {bounce = 1})
 
-	clap2 = display.newRoundedRect(_X  - _W / 2.1, _Y, 10, _H / 4, 4.5)
-	clap2:setFillColor(1,1,1)
-	physics.addBody(clap2, "static", {bounce = 1})
-	clap2.name = "clap2"
+	maila2 = display.newRect(X - W / 2.1, Y, 10, H /4, 4.5)
+	maila2.nimi = "maila2"
+	physics.addBody(maila2, "static", {bounce = 1})
 end
-createObstacles()
+luoJuttuja()
 
--- this function is the collision checker function
+local function gameStart()
+	physics.start()
+	if pallo then physics.removeBody(pallo) display.remove(pallo) pallo = nil end
+	pallo = display.newCircle(X, Y, 10)
+	pallo.nimi = "pallo"
+
+	timer.performWithDelay(50, function() physics.addBody(pallo, {bounce = 1, radius = 10}) pallo:applyForce(2, math.random(-300, 300) / 100) end, 1)
+	online = true
+end
+
+local function gameReset()
+	physics.stop()
+	physics.removeBody(pallo)
+	display.remove(pallo)
+	pallo = nil
+	online = false
+
+	timer.performWithDelay(1000, gameStart, 1)
+end
+
 local function collide(event)
 	if "began" == event.phase then
 
-		if event.object1.name == "wall1" then
+		if event.object1.nimi == "seina1" then
 			scoreAI = scoreAI + 1
 			gameReset()
-		elseif event.object1.name == "wall2" then
+		elseif event.object1.nimi == "seina2" then
 			score = score + 1
 			gameReset()
-
 		end
-		scoreText.text = ""..scoreAI.."      "..score..""
+		scoreTeksti.text = ""..scoreAI.." "..score..""
 	end
 end
 Runtime:addEventListener("collision", collide)
 
--- this function will start up the physics create ball and make it move and some other things
-function gameStart()
-	physics.start()
-	if ball then physics.removeBody(ball) display.remove(ball) ball = nil end
-	ball = display.newCircle(_X, _Y, 10)
-	ball.name = "ball"
-	
-	timer.performWithDelay(50, function() physics.addBody(ball, {bounce = 1, radius = 10}) ball:applyForce(2, math.random(-300,300) / 100, ball.x, ball.y) end, 1)
-	online = true
-end
-
--- this function resets the game, stopping physics and removing ball and some other things
--- also makes the screen flash several times before starting up the game again
-function gameReset()
-	physics.stop()
-	physics.removeBody(ball) display.remove(ball) ball = nil
-	online = false
-	
-
-	es = display.setDefault("background", 1, 0, 0)
-	timer.performWithDelay(200, function() es = display.setDefault("background", 0, 1, 0) end, 1)
-	timer.performWithDelay(400, function() es = display.setDefault("background", 1, 0, 1) end, 1)
-	timer.performWithDelay(600, function() es = display.setDefault("background", 1, 1, 0) end, 1)
-	timer.performWithDelay(800, function() es = display.setDefault("background", 0, 1, 0) end, 1)
-	timer.performWithDelay(1000, function() es = display.setDefault("background", 0, 0, 1) end, 1)
-	timer.performWithDelay(1200, function() es = display.setDefault("background", 1, 0, 0) end, 1)
-	timer.performWithDelay(1400, function() es = display.setDefault("background", 0, 1, 0) end, 1)
-	timer.performWithDelay(1600, function() es = display.setDefault("background", 1, 0, 1) end, 1)
-	timer.performWithDelay(1800, function() es = display.setDefault("background", 1, 1, 0) end, 1)
-	timer.performWithDelay(2000, function() es = display.setDefault("background", 0, 1, 0) end, 1)
-	timer.performWithDelay(2200, function() es = display.setDefault("background", 0, 0, 0) gameStart() end, 1)
-end
-
--- this function makes the clap 1 move when user moves finger/mouse on the screen
-local function moveClap1 (event)
+local function liikutaMaila1(event)
 	if "began" == event.phase then
-
-		-- see if event.y is upper or below the clap1.y and then make a variable that we use later
-		-- to make so that the user does not need to press directly the clap1
-		if event.y < clap1.y then
-			yzz = clap1.y - event.y
-		elseif event.y > clap1.y then
-			yzz = (event.y - clap1.y) * -1
+		if event.y < maila1.y then
+			vali = maila1.y - event.y
+		elseif event.y > maila1.y then
+			vali = (event.y - maila1.y) * -1
 		end
 
-		-- once moved the mouse/finger on the screen, check if the event.y + yzz is more/less than roof.y
-		-- and adjust it so that the clap can not go below/over roofs
-	elseif "moved" == event.phase then
-		if event.y + yzz > roof1.y + clap1.height / 2 and event.y + yzz < roof2.y - clap1.height / 2 then
-			clap1.y = event.y + yzz
+		elseif "moved" == event.phase then
+			if event.y + vali > katto1.y + maila1.height / 2 and event.y + vali < katto2.y - maila1.height / 2 then
+				maila1.y = event.y + vali
+			end
 		end
-	end
 end
-Runtime:addEventListener("touch", moveClap1)
+Runtime:addEventListener("touch", liikutaMaila1)
 
--- this is the AI function and it controls and moves the AI clap
-local function clap2AI (event)
+local function maila2AI (event)
 	if online == true then
-		if ball.y > clap2.y then
-			clap2.y = clap2.y + 1.5
+		if pallo.y > maila2.y then
+			maila2.y = maila2.y + 1.5
 		end
-		if ball.y < clap2.y then
-			clap2.y = clap2.y - 1.5
+		if pallo.y < maila2.y then
+			maila2.y = maila2.y - 1.5
 		end
 	end
 end
-timer.performWithDelay(10, clap2AI, 0)
+timer.performWithDelay(10, maila2AI, 0)
 
--- this makes the game go on (just calls the gameStart function)
 gameStart()
